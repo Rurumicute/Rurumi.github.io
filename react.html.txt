@@ -1,0 +1,103 @@
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+
+export default function ReactionTest() {
+  // 狀態管理燈號、開始時間、反應時間、遊戲狀態、延遲時間
+  const [lights, setLights] = useState([false, false, false, false, false]);
+  const [startTime, setStartTime] = useState(null);
+  const [reactionTime, setReactionTime] = useState(null);
+  const [gameState, setGameState] = useState("waiting"); // "waiting" (等待開始), "ready" (準備階段), "running" (計時中), "finished" (遊戲結束)
+  const [delay, setDelay] = useState(0);
+
+  useEffect(() => {
+    if (gameState === "ready") {
+      let index = 0;
+      // 依序點亮紅燈
+      const interval = setInterval(() => {
+        setLights((prev) => {
+          const newLights = [...prev];
+          newLights[index] = true;
+          return newLights;
+        });
+        index++;
+        if (index === 5) {
+          clearInterval(interval);
+          setTimeout(() => {
+            setLights([false, false, false, false, false]); // 熄滅所有燈
+            setDelay(Math.random() * 1000 + 1000); // 設定 1~2 秒內隨機時間
+            setTimeout(() => {
+              setLights([true, true, true, true, true]); // 所有燈變綠色
+              setStartTime(Date.now()); // 記錄開始時間
+              setGameState("running"); // 進入計時狀態
+            }, delay);
+          }, 500);
+        }
+      }, 500);
+    }
+  }, [gameState]);
+
+  const handleClick = () => {
+    if (gameState === "waiting") {
+      // 遊戲開始，進入準備階段
+      setLights([false, false, false, false, false]);
+      setReactionTime(null);
+      setGameState("ready");
+    } else if (gameState === "running") {
+      // 反應時間停止計時
+      const endTime = Date.now();
+      setReactionTime(endTime - startTime);
+      setGameState("finished");
+    } else if (gameState === "finished") {
+      // 重新開始遊戲
+      setGameState("waiting");
+    }
+  };
+
+  // 根據反應時間顯示不同結果
+  const getResultMessage = () => {
+    if (reactionTime <= 500) return "這到底是什麼閃現";
+    if (reactionTime <= 990) return "游刃有餘";
+    if (reactionTime <= 1500) return "驚險拆彈";
+    return "你還是下去好了";
+  };
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 relative">
+      {/* 背景炸彈圖案 */}
+      <div className="absolute inset-0 opacity-60 bg-[url('/bombs.png')] bg-cover" />
+      
+      {/* 計時器 */}
+      <div className="relative text-white text-4xl font-bold mb-4">
+        {reactionTime !== null ? (reactionTime / 1000).toFixed(2) : "0:00:00"}
+      </div>
+      
+      {/* 燈號顯示 */}
+      <div className="flex gap-2 mb-6">
+        {lights.map((isOn, index) => (
+          <motion.div
+            key={index}
+            className={`w-12 h-12 rounded-full ${isOn ? 'bg-red-600' : 'bg-gray-700'}`}
+            animate={{ backgroundColor: lights.every(l => l) ? "#00ff00" : isOn ? "#ff0000" : "#444" }}
+          />
+        ))}
+      </div>
+      
+      {/* 開始/點擊按鈕 */}
+      <Button onClick={handleClick} className="px-6 py-3 bg-blue-500 text-white rounded-lg text-xl">
+        {gameState === "waiting" ? "開始測試" : "點擊"}
+      </Button>
+      
+      {/* 結果訊息顯示 */}
+      {gameState === "finished" && (
+        <motion.div 
+          className="absolute text-white text-3xl font-bold mt-6"
+          initial={{ scale: 0.5, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+        >
+          {getResultMessage()}
+        </motion.div>
+      )}
+    </div>
+  );
+}
